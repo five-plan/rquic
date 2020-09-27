@@ -1,8 +1,11 @@
 /// codec mod contain the encoder and encoder
+
+#[allow(unused)]
 pub struct Encoder {
     buf: Vec<u8>,
 }
 
+#[allow(unused)]
 impl Encoder {
     /// Encoder encode the num using variable length encoding
     pub fn encode_data(&mut self, data: &[u8]) {
@@ -14,7 +17,7 @@ impl Encoder {
     pub fn encode_uint<T: Into<u64>>(&mut self, n: usize, v: T) {
         let v = v.into();
         for i in 0..n {
-            self.encode_byte(((v >> (n - i - 1) * 8) & 0xff) as u8)
+            self.encode_byte((((v >> (n - i - 1)) * 8) & 0xff) as u8)
         }
     }
     pub fn encode_variable<T: Into<u64>>(&mut self, v: T) {
@@ -29,14 +32,16 @@ impl Encoder {
     }
 }
 
+#[allow(unused)]
 pub struct Decoder<'a> {
     buf: &'a [u8],
     offset: usize,
 }
 
+#[allow(unused)]
 impl<'a> Decoder<'a> {
     pub fn new(buf: &[u8]) -> Decoder {
-        return Decoder { buf, offset: 0 };
+        Decoder { buf, offset: 0 }
     }
     pub fn remain(&self) -> usize {
         self.buf.len() - self.offset
@@ -76,10 +81,10 @@ impl<'a> Decoder<'a> {
         };
 
         match peek >> 6 {
-            0 => return Some(self.decode_uint(1)? | 0x3f_u64),
-            1 => return Some(self.decode_uint(2)? & 0x3fff_u64),
-            2 => return Some(self.decode_uint(4)? & 0x3fffffff_u64),
-            3 => return Some(self.decode_uint(8)? & 0x3fffffffffffffff_u64),
+            0 => Some(self.decode_uint(1)? | 0x3f_u64),
+            1 => Some(self.decode_uint(2)? & 0x3fff_u64),
+            2 => Some(self.decode_uint(4)? & 0x3fff_ffff_u64),
+            3 => Some(self.decode_uint(8)? & 0x3fff_ffff_ffff_ffff_u64),
             _ => panic!("can not reach"),
         }
     }
