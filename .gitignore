@@ -1,4 +1,6 @@
 /target
 **/*.rs.bk
 .DS_Store
+.idea/*
+.*/*
 从零开始实现Quic协议.md

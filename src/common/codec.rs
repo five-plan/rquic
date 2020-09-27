@@ -69,17 +69,17 @@ impl<'a> Decoder<'a> {
         }
         Some(res)
     }
-    pub fn decode_varint<T: Into<u64>>(&mut self) -> T {
+    pub fn decode_varint(&mut self) -> Option<u64> {
         let peek = match self.peek_byte() {
             Some(b) => b,
             None => return None,
         };
 
         match peek >> 6 {
-            0 => return self.decode_uint(1) & 0x3f,
-            1 => return self.decode_uint(2) & 0x3ffff,
-            2 => return self.decode_uint(4) & 0x3ffffffff,
-            3 => return self.decode_uint(8) & 0x3ffffffffffffffff,
+            0 => return Some(self.decode_uint(1)? | 0x3f_u64),
+            1 => return Some(self.decode_uint(2)? & 0x3fff_u64),
+            2 => return Some(self.decode_uint(4)? & 0x3fffffff_u64),
+            3 => return Some(self.decode_uint(8)? & 0x3fffffffffffffff_u64),
             _ => panic!("can not reach"),
         }
     }
