@@ -1,3 +1,17 @@
+// MIT License
+//
+// Copyright (c) 2020 five-plan
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
 /// codec mod contain the encoder and encoder
 
 #[allow(unused)]
@@ -8,6 +22,9 @@ pub struct Encoder {
 #[allow(unused)]
 impl Encoder {
     /// Encoder encode the num using variable length encoding
+    pub fn new() -> Encoder {
+        Encoder { buf: Vec::new() }
+    }
     pub fn encode_data(&mut self, data: &[u8]) {
         self.buf.extend_from_slice(data)
     }
@@ -17,10 +34,10 @@ impl Encoder {
     pub fn encode_uint<T: Into<u64>>(&mut self, n: usize, v: T) {
         let v = v.into();
         for i in 0..n {
-            self.encode_byte((((v >> (n - i - 1)) * 8) & 0xff) as u8)
+            self.encode_byte(((v >> ((n - i - 1) * 8)) & 0xff_u64) as u8)
         }
     }
-    pub fn encode_variable<T: Into<u64>>(&mut self, v: T) {
+    pub fn encode_varint<T: Into<u64>>(&mut self, v: T) {
         let v = v.into();
         match () {
             _ if v < (1 << 6) => self.encode_uint(1, v),
@@ -29,6 +46,9 @@ impl Encoder {
             _ if v < (1 << 62) => self.encode_uint(8, v),
             _ => panic!("variable length value is too large"),
         }
+    }
+    pub fn raw(&self) -> Vec<u8> {
+        self.buf.clone()
     }
 }
 
@@ -88,4 +108,54 @@ impl<'a> Decoder<'a> {
             _ => panic!("can not reach"),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    use std::cmp::min;
+
+    #[test]
+    fn test_encode_data() {
+        let mut origin: [u8; 0x100] = [0; 0x100];
+        for i in 0..0xff {
+            origin[i] = i as u8;
+        }
+        let mut encoder = Encoder::new();
+        encoder.encode_data(&origin);
+        assert_eq!(&origin[..], &encoder.raw()[..]);
+    }
+
+    #[test]
+    fn test_encode_byte() {
+        let mut encoder = Encoder::new();
+        for i in 0..0xff {
+            encoder.encode_byte(i)
+        }
+        let buf = encoder.raw();
+        for i in 0..0xff {
+            assert_eq!(i, buf[i] as usize)
+        }
+    }
+
+    #[test]
+    fn test_encode_uint() {
+        let small = 0x1_u8;
+        let mid = 0x0203_u16;
+        let big = 0x0405_0607_u32;
+        let bigger = 0x0809_0a0b_0c0d_0e0f_u64;
+        let mut encoder = Encoder::new();
+        encoder.encode_uint(1, small);
+        encoder.encode_uint(2, mid);
+        encoder.encode_uint(4, big);
+        encoder.encode_uint(8, bigger);
+        let res = encoder.raw();
+        for i in 1..(min(0x10, res.len() + 1)) {
+            assert_eq!(i, res[i - 1] as usize)
+        }
+    }
+
+    #[test]
+    fn test_encode_varint() {}
 }
